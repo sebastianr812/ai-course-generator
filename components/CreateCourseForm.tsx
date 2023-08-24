@@ -10,6 +10,10 @@ import { Button } from './ui/button';
 import { Separator } from './ui/separator';
 import { Plus, Trash } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion'
+import { useMutation } from '@tanstack/react-query';
+import axios from 'axios';
+import { useToast } from './ui/use-toast';
+import { useRouter } from 'next/navigation';
 
 interface CreateCourseFormProps {
 
@@ -17,6 +21,8 @@ interface CreateCourseFormProps {
 
 const CreateCourseForm: FC<CreateCourseFormProps> = ({ }) => {
 
+    const router = useRouter();
+    const { toast } = useToast();
     const form = useForm<CreateChaptersRequest>({
         resolver: zodResolver(CreateChaptersValidator),
         defaultValues: {
@@ -25,8 +31,45 @@ const CreateCourseForm: FC<CreateCourseFormProps> = ({ }) => {
         }
     });
 
+    const {
+        mutate: createChapters,
+        isLoading
+    } = useMutation({
+        mutationFn: async ({ title, units }: CreateChaptersRequest) => {
+            const payload: CreateChaptersRequest = {
+                title,
+                units
+            }
+            const { data } = await axios.post('/api/course/createChapters', payload);
+            return data;
+        }
+    })
+
     function onSubmit(data: CreateChaptersRequest) {
-        console.log(data);
+        if (data.units.some(unit => unit === '')) {
+            toast({
+                title: 'Error',
+                description: 'Please fill out all of the units',
+                variant: 'destructive'
+            });
+            return;
+        }
+        createChapters(data, {
+            onSuccess: ({ course_id }) => {
+                toast({
+                    title: 'Success',
+                    description: 'Course created successfully'
+                });
+                router.push(`/create/${course_id}`);
+            },
+            onError: (e) => {
+                toast({
+                    title: 'Error',
+                    description: 'Something went wrong',
+                    variant: "destructive"
+                });
+            }
+        })
     }
 
     form.watch();
@@ -107,7 +150,11 @@ const CreateCourseForm: FC<CreateCourseFormProps> = ({ }) => {
                         </div>
                         <Separator className='flex-[1]' />
                     </div>
-                    <Button type="submit" className='w-full mt-6' size='lg'>
+                    <Button
+                        type="submit"
+                        className='w-full mt-6'
+                        size='lg'
+                        disabled={isLoading}>
                         Lets Go!
                     </Button>
                 </form>
