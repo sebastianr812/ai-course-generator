@@ -5,11 +5,14 @@ import { getTranscript, searchYoutube } from "@/lib/youtube";
 import { NextResponse } from "next/server";
 import * as z from 'zod';
 
+
+const bodyObject = z.object({
+    chapterId: z.string()
+});
+
 export async function POST(req: Request) {
     try {
-        const bodyObject = z.object({
-            chapterId: z.string()
-        });
+
         const body = await req.json();
         const {
             chapterId
@@ -22,19 +25,24 @@ export async function POST(req: Request) {
         });
 
         if (!chapter) {
-            return new NextResponse('chatper not found', { status: 404 });
+            return NextResponse.json({
+                success: false,
+                error: 'chapter not found'
+            }, { status: 404 });
         }
 
         const videoId = await searchYoutube(chapter.youtubeSearchQuery);
+
         let transcript = await getTranscript(videoId);
-        const max_legnth = 500;
-        transcript = transcript.split(' ').slice(0, max_legnth).join(' ')
+        let maxLength = 250;
+        transcript = transcript.split(' ').slice(0, maxLength).join(' ');
+
         const { summary }: { summary: string } = await strict_output(
             `You are an AI capable of summarizing a youtube transcript`,
             `summarize in 250 words or less and do not talk of the sponsors or anything unrelated to the main topic,
-            also do not introduce what the summary is about. Here is the youtube transcript:\n` + transcript,
+            also do not introduce what the summary is about.\n` + transcript,
             {
-                summary: 'summary of the transcript'
+                summary: 'summary of the transcript in JSON format'
             }
         );
 
