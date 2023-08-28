@@ -1,6 +1,7 @@
 import { getAuthSession } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { strict_output } from "@/lib/gpt";
+import { checkSubscription } from "@/lib/subscription";
 import { getUnsplashImage } from "@/lib/unsplash";
 import { CreateChaptersValidator } from "@/lib/validators/course";
 import { NextResponse } from "next/server";
@@ -8,6 +9,14 @@ import * as z from 'zod';
 
 export async function POST(req: Request) {
     try {
+        const session = await getAuthSession();
+        if (!session?.user) {
+            return new NextResponse('unauthorized', { status: 401 });
+        }
+        const isPro = await checkSubscription();
+        if (session.user.credits <= 0 && !isPro) {
+            return new NextResponse('no credits left', { status: 402 });
+        }
         const body = await req.json();
         const {
             title,
@@ -74,7 +83,16 @@ export async function POST(req: Request) {
                 }))
             });
         }
-
+        await db.user.update({
+            where: {
+                id: session.user.id
+            },
+            data: {
+                credits: {
+                    decrement: 1
+                }
+            }
+        });
         return NextResponse.json({ course_id: course.id })
 
     } catch (e) {

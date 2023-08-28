@@ -14,12 +14,15 @@ import { useMutation } from '@tanstack/react-query';
 import axios from 'axios';
 import { useToast } from './ui/use-toast';
 import { useRouter } from 'next/navigation';
+import SubscriptionAction from './SubscriptionAction';
 
 interface CreateCourseFormProps {
-
+    isPro: boolean;
 }
 
-const CreateCourseForm: FC<CreateCourseFormProps> = ({ }) => {
+const CreateCourseForm: FC<CreateCourseFormProps> = ({
+    isPro
+}) => {
 
     const router = useRouter();
     const { toast } = useToast();
@@ -159,6 +162,9 @@ const CreateCourseForm: FC<CreateCourseFormProps> = ({ }) => {
                     </Button>
                 </form>
             </Form>
+            {!isPro && (
+                <SubscriptionAction />
+            )}
         </div>
     )
 }
